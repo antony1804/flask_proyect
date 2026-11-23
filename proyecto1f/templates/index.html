@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mis tareas</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<main class="contenedor">
+
+    <header class="cabecera">
+        <h1> Mis tareas</h1>
+
+        <form action="{{ url_for('inicio') }}" method="GET" class="buscador">
+            <input type="search" name="q" value="{{ q }}" placeholder="Buscar tareas...">
+            <button type="submit">Buscar</button>
+            {% if q %}
+                <a href="{{ url_for('inicio') }}" class="limpiar">Limpiar</a>
+            {% endif %}
+        </form>
+    </header>
+
+    <section class="tarjeta">
+        <h2 class="titulo-form">Nueva tarea</h2>
+        <form action="{{ url_for('agregar') }}" method="POST" class="formulario">
+            <input type="hidden" name="q" value="{{ q }}">
+
+            <div class="campo campo-grande">
+                <label for="titulo">¿Qué hay que hacer?</label>
+                <input type="text" id="titulo" name="titulo" maxlength="200"
+                       placeholder="Ej: Entregar el informe" required>
+            </div>
+
+            <div class="campo">
+                <label>Categoría</label>
+                <div class="pills">
+                    {% for c in categorias %}
+                        <input type="radio" id="cat-{{ c }}" name="categoria" value="{{ c }}"
+                               {% if loop.first %}checked{% endif %}>
+                        <label for="cat-{{ c }}" class="pill {{ c }}">{{ c.capitalize() }}</label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="campo">
+                <label for="fecha_limite">Fecha límite</label>
+                <input type="date" id="fecha_limite" name="fecha_limite" min="{{ hoy }}">
+            </div>
+
+            <button type="submit" class="btn-agregar">+ Agregar</button>
+        </form>
+    </section>
+
+    {% if q %}
+        <p class="resumen">
+            {{ total }} resultado{{ '' if total == 1 else 's' }} para "<strong>{{ q }}</strong>"
+        </p>
+    {% endif %}
+
+    <div class="columnas">
+        {% for categoria, tareas in tareas_por_categoria.items() %}
+        <section class="columna {{ categoria }}">
+            <h2>{{ categoria.capitalize() }} <span class="contador">{{ tareas|length }}</span></h2>
+
+            {% for t in tareas %}
+            <article class="tarea {% if t.completada %}hecha{% elif t.vencida %}vencida{% endif %}">
+                <div class="info">
+                    <strong>{{ t.titulo }}</strong>
+                    {% if t.fecha_limite %}
+                        <small>
+                               {{ t.fecha_limite.strftime('%d/%m/%Y') }}
+                            {% if not t.completada %}
+                                {% if t.dias_restantes < 0 %}
+                                    · <span class="etiqueta rojo">Vencida</span>
+                                {% elif t.dias_restantes == 0 %}
+                                    · <span class="etiqueta naranja">Hoy</span>
+                                {% elif t.dias_restantes <= 2 %}
+                                    · <span class="etiqueta naranja">En {{ t.dias_restantes }} día{{ '' if t.dias_restantes == 1 else 's' }}</span>
+                                {% endif %}
+                            {% endif %}
+                        </small>
+                    {% endif %}
+                </div>
+
+                <div class="acciones">
+                    <form action="{{ url_for('completar', tarea_id=t.id) }}" method="POST">
+                        <input type="hidden" name="q" value="{{ q }}">
+                        <button class="icono ok" title="{{ 'Marcar pendiente' if t.completada else 'Completar' }}">
+                            {{ '↩' if t.completada else '✔' }}
+                        </button>
+                    </form>
+                    <form action="{{ url_for('eliminar', tarea_id=t.id) }}" method="POST"
+                          onsubmit="return confirm('¿Eliminar esta tarea?');">
+                        <input type="hidden" name="q" value="{{ q }}">
+                        <button class="icono borrar" title="Eliminar">🗑</button>
+                    </form>
+                </div>
+            </article>
+            {% else %}
+                <p class="vacio">{{ 'Sin resultados' if q else 'Sin tareas' }}</p>
+            {% endfor %}
+        </section>
+        {% endfor %}
+    </div>
+
+</main>
+</body>
+</html>
